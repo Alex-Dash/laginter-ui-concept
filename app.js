@@ -4,10 +4,35 @@ const target = document.getElementById('movebox');
 const area = document.getElementById('playarea');
 const title = document.getElementById('boxtitle');
 
+const ge = {
+    title: {
+        e: document.getElementById("g-title"),
+        ctx: document.getElementById("g-title").getContext("2d"),
+    },
+    text: {
+        e: document.getElementById("g-text"),
+        ctx: document.getElementById("g-text").getContext("2d")
+    },
+    grad: {
+        e: document.getElementById("g-grad"),
+        ctx: document.getElementById("g-grad").getContext("2d")
+    },
+}
+
 var tgt_pos = [Number(window.getComputedStyle(target).left.replaceAll("px","")), Number(window.getComputedStyle(target).top.replaceAll("px",""))]
 var tgt_dims = [Number(window.getComputedStyle(target).width.replaceAll("px","")), Number(window.getComputedStyle(target).height.replaceAll("px",""))]
+var canvas_size_ref = [Number(window.getComputedStyle(ge.title.e).width.replaceAll("px","")), Number(window.getComputedStyle(ge.title.e).height.replaceAll("px",""))]
 var mouse_flag = false;
 var mouse_ref = [0, 0];
+
+ge.title.e.setAttribute('width', canvas_size_ref[0])
+ge.title.e.setAttribute('height', canvas_size_ref[1])
+
+ge.text.e.setAttribute('width', canvas_size_ref[0])
+ge.text.e.setAttribute('height', canvas_size_ref[1])
+
+ge.grad.e.setAttribute('width', canvas_size_ref[0])
+ge.grad.e.setAttribute('height', canvas_size_ref[1])
 
 const known_points = {
     title:[
@@ -22,13 +47,11 @@ const known_points = {
         [1, 0],
     ],
     text:[
-        [0, 1],
-        [0.23, 1],
-        [0.33, 0.5],
-        [0.5, 0.2],
-        [0.6, 0.7],
-        [0.75, 1],
-        [1, 1],
+        [0, 0],
+        [0.23, 0.8],
+        [0.5, 0.3],
+        [0.75, 0.8],
+        [1, 0],
     ],
     grad_x:[
         [0.0, -612],
@@ -43,6 +66,18 @@ const known_points = {
         [1, -860],
     ]
 }
+
+// Calculate graph bounds
+ge.title.max = Math.max(...known_points.title.map(e=>e[1]))
+ge.title.min = Math.min(...known_points.title.map(e=>e[1]))
+
+ge.grad.xmax = Math.max(...known_points.grad_x.map(e=>e[1]))
+ge.grad.xmin = Math.min(...known_points.grad_x.map(e=>e[1]))
+
+ge.grad.ymax = Math.max(...known_points.grad_y.map(e=>e[1]))
+ge.grad.ymin = Math.min(...known_points.grad_y.map(e=>e[1]))
+
+const g_epsilon = 0.01 
 
 /**
  * Interpolates a given value using Lagrange's Interpolation
@@ -99,6 +134,160 @@ function clampVector(vector, min, max) {
     return nv
 }
 
+function remap(input, from_min, from_max, to_min, to_max, clamp = true) {
+    let perc = (input-from_min)/(from_max-from_min)
+    if(clamp){
+        perc = (perc<0 || perc>1)?(perc<0?0:1):perc
+    }
+    return (to_max-to_min)*perc+to_min
+}
+
+function redrawGraphs(center_float, textfloat, ref_size) {
+    ge.title.ctx.fillStyle = 'rgb(34, 34, 34)';
+    ge.title.ctx.fillRect(0,0,ref_size[0], ref_size[1]);
+    ge.text.ctx.fillStyle = 'rgb(34, 34, 34)';
+    ge.text.ctx.fillRect(0,0,ref_size[0], ref_size[1]);
+    ge.grad.ctx.fillStyle = 'rgb(34, 34, 34)';
+    ge.grad.ctx.fillRect(0,0,ref_size[0], ref_size[1]);
+
+    // title graph
+    ge.title.ctx.fillStyle = "rgba(200, 200, 200, 0.5)";
+    ge.title.ctx.font = `${ref_size[1]/8}px 'Ubuntu Sans Mono', monospace`;
+    let label1 = "Title position interpolation"
+    ge.title.ctx.fillText(label1, ref_size[0]/2-(ref_size[1]/8*label1.length/4), ref_size[1]/7);
+    ge.title.ctx.strokeStyle = "rgb(200, 200, 200)";
+    ge.title.ctx.lineWidth  = 2;
+    ge.title.ctx.beginPath();
+    ge.title.ctx.moveTo(
+        remap(0, 0, 1, 0, ref_size[0]),
+        ref_size[1]-remap(known_points.title[0][1], ge.title.min, ge.title.max, 0, ref_size[1])
+    );
+
+    for (let step = 0; step < center_float[0]; step+=0.005) {
+        ge.title.ctx.lineTo(
+            remap(step, 0, 1, 0, ref_size[0]), 
+            ref_size[1]-remap(laginter(step, known_points.title), ge.title.min, ge.title.max, 0, ref_size[1])
+        );
+    }
+    ge.title.ctx.stroke();
+
+    for (const point of known_points.title) {
+        ge.title.ctx.fillStyle = "rgba(200, 60, 200, 0.7)";
+        ge.title.ctx.beginPath();
+        ge.title.ctx.arc(
+            remap(point[0], 0, 1, 0, ref_size[0]), 
+            ref_size[1]-remap(point[1], ge.title.min, ge.title.max, 0, ref_size[1]),
+            8,
+            0,
+            2 * Math.PI
+        );
+        ge.title.ctx.fill();
+    }
+
+    // text graph
+    ge.text.ctx.fillStyle = "rgba(200, 200, 200, 0.5)";
+    ge.text.ctx.font = `${ref_size[1]/8}px 'Ubuntu Sans Mono', monospace`;
+    let label2 = "Text fill interpolation"
+    ge.text.ctx.fillText(label2, ref_size[0]/2-(ref_size[1]/8*label2.length/4), ref_size[1]/7);
+    ge.text.ctx.strokeStyle = "rgb(200, 200, 200)";
+    ge.text.ctx.lineWidth  = 2;
+    ge.text.ctx.beginPath();
+    ge.text.ctx.moveTo(
+        remap(0, 0, 1, 0, ref_size[0]),
+        ref_size[1]-remap(known_points.text[0][1], 0, 1, 0, ref_size[1])
+    );
+
+    for (let step = 0; step < textfloat; step+=0.005) {
+        ge.text.ctx.lineTo(
+            remap(step, 0, 1, 0, ref_size[0]), 
+            ref_size[1]-remap(laginter(step, known_points.text), 0, 1, 0, ref_size[1])
+        );
+    }
+    ge.text.ctx.stroke();
+
+    for (const point of known_points.text) {
+        ge.text.ctx.fillStyle = "rgba(200, 60, 200, 0.7)";
+        ge.text.ctx.beginPath();
+        ge.text.ctx.arc(
+            remap(point[0], 0, 1, 0, ref_size[0]), 
+            ref_size[1]-remap(point[1], 0, 1, 0, ref_size[1]),
+            8,
+            0,
+            2 * Math.PI
+        );
+        ge.text.ctx.fill();
+    }
+
+
+    // grad label
+    ge.grad.ctx.fillStyle = "rgba(200, 200, 200, 0.5)";
+    ge.grad.ctx.font = `${ref_size[1]/8}px 'Ubuntu Sans Mono', monospace`;
+    let label3 = "Gradient position interpolation"
+    ge.grad.ctx.fillText(label3, ref_size[0]/2-(ref_size[1]/8*label3.length/4), ref_size[1]/7);
+
+    // grad graph x
+    ge.grad.ctx.strokeStyle = "rgb(200, 60, 60)";
+    ge.grad.ctx.lineWidth  = 2;
+    ge.grad.ctx.beginPath();
+    ge.grad.ctx.moveTo(
+        remap(0, 0, 1, 0, ref_size[0]),
+        ref_size[1]-remap(known_points.grad_x[0][1], ge.grad.min, ge.grad.max, 0, ref_size[1])
+    );
+
+    for (let step = 0; step < center_float[0]; step+=0.005) {
+        ge.grad.ctx.lineTo(
+            remap(step, 0, 1, 0, ref_size[0]), 
+            ref_size[1]-remap(laginter(step, known_points.grad_x), ge.grad.xmin, ge.grad.xmax, 0, ref_size[1])
+        );
+    }
+    ge.grad.ctx.stroke();
+
+    for (const point of known_points.grad_x) {
+        ge.grad.ctx.fillStyle = "rgba(200, 60, 60, 0.7)";
+        ge.grad.ctx.beginPath();
+        ge.grad.ctx.arc(
+            remap(point[0], 0, 1, 0, ref_size[0]), 
+            ref_size[1]-remap(point[1], ge.grad.xmin, ge.grad.xmax, 0, ref_size[1]),
+            8,
+            0,
+            2 * Math.PI
+        );
+        ge.grad.ctx.fill();
+    }
+
+    // grad graph y
+    ge.grad.ctx.strokeStyle = "rgb(60, 200, 60)";
+    ge.grad.ctx.lineWidth  = 2;
+    ge.grad.ctx.beginPath();
+    ge.grad.ctx.moveTo(
+        remap(0, 0, 1, 0, ref_size[0]),
+        ref_size[1]-remap(known_points.grad_y[0][1], ge.grad.min, ge.grad.max, 0, ref_size[1])
+    );
+
+    for (let step = 0; step < center_float[1]; step+=0.005) {
+        ge.grad.ctx.lineTo(
+            remap(step, 0, 1, 0, ref_size[0]), 
+            ref_size[1]-remap(laginter(step, known_points.grad_y), ge.grad.ymin, ge.grad.ymax, 0, ref_size[1])
+        );
+    }
+    ge.grad.ctx.stroke();
+
+    for (const point of known_points.grad_y) {
+        ge.grad.ctx.fillStyle = "rgba(60, 200, 60, 0.7)";
+        ge.grad.ctx.beginPath();
+        ge.grad.ctx.arc(
+            remap(point[0], 0, 1, 0, ref_size[0]), 
+            ref_size[1]-remap(point[1], ge.grad.ymin, ge.grad.ymax, 0, ref_size[1]),
+            8,
+            0,
+            2 * Math.PI
+        );
+        ge.grad.ctx.fill();
+    }
+}
+
+redrawGraphs([0.25, 0.25], 0.25, canvas_size_ref)
+
 document.addEventListener('mousedown', (e)=>{
     mouse_flag = true
     mouse_ref = [e.clientX, e.clientY]
@@ -123,7 +312,6 @@ target.addEventListener('mousemove', (e)=>{
     ], 0, 1);
     
     title.style.left = laginter(center_float[0], known_points.title)+"px"
-    console.log(center_float[0])
 
     target.style.left = newpos[0]+"px"
     target.style.top = newpos[1]+"px"
@@ -134,7 +322,10 @@ target.addEventListener('mousemove', (e)=>{
     target.style.backgroundPositionX = laginter(center_float[0], known_points.grad_x)+"px"
     target.style.backgroundPositionY = laginter(center_float[1], known_points.grad_y)+"px"
 
+    redrawGraphs(center_float, textfloat, canvas_size_ref)
+    
     //update ref
     mouse_ref = [e.clientX, e.clientY]
     tgt_pos = newpos
+
 })

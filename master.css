@@ -15,7 +15,6 @@
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background-color: rgb(32, 32, 32);
 }
 
 .ns {
@@ -61,4 +60,17 @@
 .box-text{
     margin-top: 4.5rem;
     padding: 1rem;
+}
+
+.graphs{
+    /* margin-top: 100vh; */
+    position: absolute;
+    pointer-events: none;
+    z-index: -2;
+}
+
+.graphs>canvas{
+    width: 100vw;
+    height: 33vh;
+    margin: 0;
 }
