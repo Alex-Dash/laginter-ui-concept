@@ -152,9 +152,9 @@ function redrawGraphs(center_float, textfloat, ref_size) {
 
     // title graph
     ge.title.ctx.fillStyle = "rgba(200, 200, 200, 0.5)";
-    ge.title.ctx.font = `${ref_size[1]/8}px 'Ubuntu Sans Mono', monospace`;
+    ge.title.ctx.font = `${ref_size[1]/12}px 'Ubuntu Sans Mono', monospace`;
     let label1 = "Title position interpolation"
-    ge.title.ctx.fillText(label1, ref_size[0]/2-(ref_size[1]/8*label1.length/4), ref_size[1]/7);
+    ge.title.ctx.fillText(label1, ref_size[0]/2-(ref_size[1]/12*label1.length/4), ref_size[1]/7);
     ge.title.ctx.strokeStyle = "rgb(200, 200, 200)";
     ge.title.ctx.lineWidth  = 2;
     ge.title.ctx.beginPath();
@@ -186,9 +186,9 @@ function redrawGraphs(center_float, textfloat, ref_size) {
 
     // text graph
     ge.text.ctx.fillStyle = "rgba(200, 200, 200, 0.5)";
-    ge.text.ctx.font = `${ref_size[1]/8}px 'Ubuntu Sans Mono', monospace`;
+    ge.text.ctx.font = `${ref_size[1]/12}px 'Ubuntu Sans Mono', monospace`;
     let label2 = "Text fill interpolation"
-    ge.text.ctx.fillText(label2, ref_size[0]/2-(ref_size[1]/8*label2.length/4), ref_size[1]/7);
+    ge.text.ctx.fillText(label2, ref_size[0]/2-(ref_size[1]/12*label2.length/4), ref_size[1]/7);
     ge.text.ctx.strokeStyle = "rgb(200, 200, 200)";
     ge.text.ctx.lineWidth  = 2;
     ge.text.ctx.beginPath();
@@ -221,9 +221,9 @@ function redrawGraphs(center_float, textfloat, ref_size) {
 
     // grad label
     ge.grad.ctx.fillStyle = "rgba(200, 200, 200, 0.5)";
-    ge.grad.ctx.font = `${ref_size[1]/8}px 'Ubuntu Sans Mono', monospace`;
+    ge.grad.ctx.font = `${ref_size[1]/16}px 'Ubuntu Sans Mono', monospace`;
     let label3 = "Gradient position interpolation"
-    ge.grad.ctx.fillText(label3, ref_size[0]/2-(ref_size[1]/8*label3.length/4), ref_size[1]/7);
+    ge.grad.ctx.fillText(label3, ref_size[0]/2-(ref_size[1]/16*label3.length/3.3), ref_size[1]/7);
 
     // grad graph x
     ge.grad.ctx.strokeStyle = "rgb(200, 60, 60)";
@@ -288,18 +288,27 @@ function redrawGraphs(center_float, textfloat, ref_size) {
 
 redrawGraphs([0.25, 0.25], 0.25, canvas_size_ref)
 
-document.addEventListener('mousedown', (e)=>{
+const md = (e) => {
+    if(e.type.includes("touch")){
+        e.clientX = e.touches[0].clientX
+        e.clientY = e.touches[0].clientY
+    }
     mouse_flag = true
     mouse_ref = [e.clientX, e.clientY]
-})
+}
 
-document.addEventListener('mouseup', ()=>{
+const mu = (e) => {
     mouse_flag = false
-})
+}
 
-target.addEventListener('mousemove', (e)=>{
+const mm = (e)=>{
     if(!mouse_flag) {
         return
+    }
+    e.preventDefault();
+    if(e.type.includes("touch")){
+        e.clientX = e.touches[0].clientX
+        e.clientY = e.touches[0].clientY
     }
     let delta = [e.clientX - mouse_ref[0], e.clientY - mouse_ref[1]]
 
@@ -328,4 +337,15 @@ target.addEventListener('mousemove', (e)=>{
     mouse_ref = [e.clientX, e.clientY]
     tgt_pos = newpos
 
-})
+}
+
+document.addEventListener('mousedown', md)
+document.addEventListener('mouseup', mu)
+
+document.addEventListener('touchstart', md)
+
+document.addEventListener('touchend', mu)
+document.addEventListener('touchcancel', mu)
+
+target.addEventListener('mousemove', mm)
+target.addEventListener('touchmove', mm)
