@@ -29,6 +29,18 @@ const known_points = {
         [0.6, 0.7],
         [0.75, 1],
         [1, 1],
+    ],
+    grad_x:[
+        [0.0, -612],
+        [0.35, -870],
+        [0.65, -870],
+        [1, -1200],
+    ],
+    grad_y:[
+        [0.0, -453],
+        [0.35, -660],
+        [0.65, -660],
+        [1, -860],
     ]
 }
 
@@ -118,6 +130,9 @@ target.addEventListener('mousemove', (e)=>{
 
     let textfloat = (center_float[0]+center_float[1])/2
     e_text.innerText = f_text.substring(0, f_text.length*laginter(textfloat, known_points.text))
+
+    target.style.backgroundPositionX = laginter(center_float[0], known_points.grad_x)+"px"
+    target.style.backgroundPositionY = laginter(center_float[1], known_points.grad_y)+"px"
 
     //update ref
     mouse_ref = [e.clientX, e.clientY]
